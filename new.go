@@ -8,12 +8,18 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/codegangsta/cli"
 	"gopkg.in/libgit2/git2go.v22"
 )
+
+type viewTemplate struct {
+	Name string
+}
 
 // NewNewCommand returns the CLI command for "new".
 func NewNewCommand() cli.Command {
@@ -38,6 +44,8 @@ func NewNewCommand() cli.Command {
 				errorAndBail(err)
 			}
 
+			view := &viewTemplate{Name: name}
+
 			fmt.Println("Creating files...")
 			structureRoot := repoPath + "/structure"
 			err = filepath.Walk(structureRoot, func(p string, info os.FileInfo, err error) error {
@@ -46,8 +54,26 @@ func NewNewCommand() cli.Command {
 				}
 
 				dest := appPath + subtractRoot(structureRoot, p)
+				if strings.HasSuffix(p, ".tmpl") {
+					dest = dest[:len(dest)-len(".tmpl")]
+					t := template.New(path.Base(p))
+					t, err = t.ParseFiles(p)
+					if err != nil {
+						errorAndBail(err)
+					}
+					f, err := os.Create(dest)
+					if err != nil {
+						errorAndBail(err)
+					}
+					err = t.Execute(f, view)
+					if err != nil {
+						errorAndBail(err)
+					}
+					f.Close()
+				} else {
+					os.Link(p, dest)
+				}
 				fmt.Println("-- " + dest)
-				os.Link(p, dest)
 				return nil
 			})
 			if err != nil {
