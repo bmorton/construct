@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -18,7 +19,8 @@ import (
 )
 
 type viewTemplate struct {
-	Name string
+	Name         string
+	ImportPrefix string
 }
 
 // NewNewCommand returns the CLI command for "new".
@@ -39,12 +41,17 @@ func NewNewCommand() cli.Command {
 				errorAndBail(err)
 			}
 
-			appPath, err := makeAppDir(name)
+			importPrefix := ctx.GlobalString("import-prefix")
+			sourceRoot := fmt.Sprintf("%s/src/%s", ctx.GlobalString("source-path"), importPrefix)
+			appPath, err := makeAppDir(name, sourceRoot)
 			if err != nil {
 				errorAndBail(err)
 			}
 
-			view := &viewTemplate{Name: name}
+			view := &viewTemplate{
+				Name:         name,
+				ImportPrefix: importPrefix,
+			}
 
 			fmt.Println("Creating files...")
 			structureRoot := repoPath + "/structure"
@@ -71,7 +78,11 @@ func NewNewCommand() cli.Command {
 					}
 					f.Close()
 				} else {
-					os.Link(p, dest)
+					if info.IsDir() {
+						os.Mkdir(dest, 0755)
+					} else {
+						copyFile(p, dest)
+					}
 				}
 				fmt.Println("-- " + dest)
 				return nil
@@ -174,8 +185,8 @@ func getTemplateRepo(templateURL string) (*git.Repository, string, error) {
 	return repo, path, err
 }
 
-func makeAppDir(name string) (string, error) {
-	path := "." + string(filepath.Separator) + name
+func makeAppDir(name string, root string) (string, error) {
+	path := filepath.FromSlash(fmt.Sprintf("%s/%s", root, name))
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Printf("Creating directory...\n")
@@ -185,6 +196,27 @@ func makeAppDir(name string) (string, error) {
 		return "", errors.New("directory already exists, aborting")
 	}
 	return "", errors.New("failed to create directory")
+}
+
+func copyFile(src, dst string) error {
+	s, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	defer s.Close()
+
+	d, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(d, s); err != nil {
+		d.Close()
+		return err
+	}
+
+	return d.Close()
 }
 
 func errorAndBail(err error) {
