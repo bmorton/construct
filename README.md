@@ -41,6 +41,18 @@ COMMANDS:
 
 GLOBAL OPTIONS:
    --template "https://github.com/bmorton/go-template"  a URL to the template to construct from [$CONSTRUCT_TEMPLATE]
-   --help, -h           show help
-   --version, -v          print the version
+   --import-prefix                                      the prefix of the import path to use when generating files without a trailing slash (e.g. github.com/bmorton) [$CONSTRUCT_IMPORT_PREFIX]
+   --source-path                                        the path where new projects should be created (defaults to using GOPATH) [$GOPATH]
+   --help, -h                                           show help
+   --version, -v                                        print the version
+```
+
+
+## Configuration via file
+
+Construct will optionally load configuration values from a `~/.construct/config` file if it exists.  The file must be formatted as YAML and the key for each value is equal to the environment variable that would be set.  Here's what an example config would look like:
+
+```yaml
+CONSTRUCT_TEMPLATE: https://github.com/bmorton/go-template
+CONSTRUCT_IMPORT_PREFIX: github.com/bmorton
 ```
