@@ -14,7 +14,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "construct"
-	app.Version = "0.1.0"
+	app.Version = "0.2.0"
 	app.Usage = "An application constructor with flexible template support."
 	app.Author = "Brian Morton"
 	app.Email = "brian@mmm.hm"
@@ -40,6 +40,7 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		NewNewCommand(),
+		NewGenerateCommand(),
 	}
 	app.Run(os.Args)
 }
