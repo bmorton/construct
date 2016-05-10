@@ -33,7 +33,7 @@ func NewGenerateCommand() cli.Command {
 				errorAndBail(err)
 			}
 
-			_, repoPath, err := getTemplateRepo(ctx.GlobalString("template"))
+			repoPath, err := getTemplatePath(ctx.GlobalString("template"))
 			if err != nil {
 				errorAndBail(err)
 			}

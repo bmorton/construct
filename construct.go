@@ -14,7 +14,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "construct"
-	app.Version = "0.2.0"
+	app.Version = "0.3.0"
 	app.Usage = "An application constructor with flexible template support."
 	app.Author = "Brian Morton"
 	app.Email = "brian@mmm.hm"
@@ -35,7 +35,7 @@ func main() {
 			Name:   "source-path",
 			Value:  "",
 			Usage:  "the path where new projects should be created (defaults to using GOPATH)",
-			EnvVar: "GOPATH",
+			EnvVar: "CONSTRUCT_SOURCE_PATH",
 		},
 	}
 	app.Commands = []cli.Command{

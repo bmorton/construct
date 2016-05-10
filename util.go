@@ -14,18 +14,26 @@ import (
 	"gopkg.in/libgit2/git2go.v22"
 )
 
-func getTemplateRepo(templateURL string) (*git.Repository, string, error) {
+func getTemplatePath(templateURL string) (string, error) {
+	if _, err := os.Stat(templateURL); err == nil {
+		return templateURL, nil
+	} else {
+		return getTemplateRepo(templateURL)
+	}
+}
+
+func getTemplateRepo(templateURL string) (string, error) {
 	var repo *git.Repository
 	var err error
 
 	currentUser, err := user.Current()
 	if err != nil {
-		return &git.Repository{}, "", err
+		return "", err
 	}
 
 	parsedTemplate, err := url.Parse(templateURL)
 	if err != nil {
-		return &git.Repository{}, "", err
+		return "", err
 	}
 	path := fmt.Sprintf("%s/.construct/src/%s%s", currentUser.HomeDir, parsedTemplate.Host, parsedTemplate.Path)
 
@@ -35,49 +43,49 @@ func getTemplateRepo(templateURL string) (*git.Repository, string, error) {
 			fmt.Printf("-- Cloning %s...\n", templateURL)
 			repo, err = git.Clone(templateURL, path, &git.CloneOptions{})
 		} else {
-			return &git.Repository{}, "", err
+			return "", err
 		}
 	} else {
 		fmt.Printf("-- Found git repository at %s...\n", path)
 		repo, err = git.OpenRepository(path)
 		if err != nil {
-			return repo, path, err
+			return path, err
 		}
 		remote, err := repo.LookupRemote("origin")
 		if err != nil {
-			return repo, path, err
+			return path, err
 		}
 
 		refSpecs, err := remote.FetchRefspecs()
 		if err != nil {
-			return repo, path, err
+			return path, err
 		}
 
 		err = remote.Fetch(refSpecs, nil, "")
 		if err != nil {
-			return repo, path, err
+			return path, err
 		}
 
 		branch, err := repo.LookupBranch("origin/master", git.BranchRemote)
 		if err != nil {
-			return repo, path, err
+			return path, err
 		}
 		commit, err := repo.LookupCommit(branch.Target())
 		if err != nil {
-			return repo, path, err
+			return path, err
 		}
 		tree, err := commit.Tree()
 		if err != nil {
-			return repo, path, err
+			return path, err
 		}
 		err = repo.CheckoutTree(tree, &git.CheckoutOpts{Strategy: git.CheckoutForce})
 		if err != nil {
-			return repo, path, err
+			return path, err
 		}
 		err = repo.SetHeadDetached(branch.Target(), nil, "")
 	}
 
-	return repo, path, err
+	return path, err
 }
 
 func directoryWalker(templateRoot string, appPath string, view interface{}, funcMap template.FuncMap, renameMap map[string]string) func(p string, info os.FileInfo, err error) error {

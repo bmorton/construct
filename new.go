@@ -27,13 +27,19 @@ func NewNewCommand() cli.Command {
 				errorAndBail(err)
 			}
 
-			_, repoPath, err := getTemplateRepo(ctx.GlobalString("template"))
+			repoPath, err := getTemplatePath(ctx.GlobalString("template"))
 			if err != nil {
 				errorAndBail(err)
 			}
 
 			importPrefix := ctx.GlobalString("import-prefix")
-			sourceRoot := fmt.Sprintf("%s/src/%s", ctx.GlobalString("source-path"), importPrefix)
+			var sourceRoot string
+			if ctx.GlobalString("source-path") != "" {
+			  sourceRoot = ctx.GlobalString("source-path")
+			} else {
+				sourceRoot = fmt.Sprintf("%s/src/%s", ctx.GlobalString("source-path"), importPrefix)
+			}
+
 			appPath, err := makeAppDir(name, sourceRoot)
 			if err != nil {
 				errorAndBail(err)
