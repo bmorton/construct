@@ -34,8 +34,8 @@ func main() {
 		cli.StringFlag{
 			Name:   "source-path",
 			Value:  "",
-			Usage:  "the path where new projects should be created (defaults to using GOPATH)",
-			EnvVar: "CONSTRUCT_SOURCE_PATH",
+			Usage:  "the path where new projects should be created (defaults to using GOPATH if not specified)",
+			EnvVar: "GOPATH",
 		},
 	}
 	app.Commands = []cli.Command{

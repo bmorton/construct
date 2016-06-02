@@ -112,15 +112,15 @@ func directoryWalker(templateRoot string, appPath string, view interface{}, func
 			}
 			t, err = t.ParseFiles(p)
 			if err != nil {
-				errorAndBail(err)
+				return err
 			}
 			f, err := os.Create(dest)
 			if err != nil {
-				errorAndBail(err)
+				return err
 			}
 			err = t.Execute(f, view)
 			if err != nil {
-				errorAndBail(err)
+				return err
 			}
 			f.Close()
 		} else {
@@ -160,7 +160,23 @@ func subtractRoot(root string, p string) string {
 	return strings.Replace(p, root, "", -1)
 }
 
-func errorAndBail(err error) {
-	fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-	os.Exit(1)
+func printInstructions(filename string, view interface{}, funcMap template.FuncMap) error {
+	t := template.New(path.Base(filename)).Funcs(funcMap)
+	t, err := t.ParseFiles(filename)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("------------------------------------------------------------------------------")
+	err = t.Execute(os.Stdout, view)
+	if err != nil {
+		return err
+	}
+	fmt.Println("------------------------------------------------------------------------------")
+
+	return nil
+}
+
+var funcMap = template.FuncMap{
+	"capitalize": strings.Title,
 }

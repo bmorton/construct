@@ -7,7 +7,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/codegangsta/cli"
 	"github.com/gedex/inflector"
@@ -27,20 +26,20 @@ func NewGenerateCommand() cli.Command {
 		ShortName:   "g",
 		Usage:       "Generates a set of files for the given type",
 		Description: "generate [type] [name]",
-		Action: func(ctx *cli.Context) {
+		Action: func(ctx *cli.Context) error {
 			generatorType, name, err := extractGenerateParameters(ctx)
 			if err != nil {
-				errorAndBail(err)
+				return cli.NewExitError(err.Error(), 1)
 			}
 
 			repoPath, err := getTemplatePath(ctx.GlobalString("template"))
 			if err != nil {
-				errorAndBail(err)
+				return cli.NewExitError(err.Error(), 1)
 			}
 
 			appPath, err := os.Getwd()
 			if err != nil {
-				errorAndBail(err)
+				return cli.NewExitError(err.Error(), 1)
 			}
 
 			appName := path.Base(appPath)
@@ -55,9 +54,6 @@ func NewGenerateCommand() cli.Command {
 
 			fmt.Println("Creating files...")
 			templateRoot := path.Join(repoPath, generatorType)
-			funcMap := template.FuncMap{
-				"capitalize": strings.Title,
-			}
 			replacements := map[string]string{
 				"api/resource.go":           fmt.Sprintf("api/%s.go", view.SingularName),
 				"api/resources_resource.go": fmt.Sprintf("api/%s_resource.go", view.PluralName),
@@ -65,12 +61,18 @@ func NewGenerateCommand() cli.Command {
 			}
 			err = filepath.Walk(templateRoot, directoryWalker(templateRoot, appPath, view, funcMap, replacements))
 			if err != nil {
-				errorAndBail(err)
+				return cli.NewExitError(err.Error(), 1)
 			}
+
 			instructionsFile := path.Join(templateRoot, "instructions.tmpl")
 			if _, err := os.Stat(instructionsFile); err == nil {
-				printInstructions(instructionsFile, view, funcMap)
+				err = printInstructions(instructionsFile, view, funcMap)
+				if err != nil {
+					return cli.NewExitError(err.Error(), 1)
+				}
 			}
+
+			return nil
 		},
 	}
 }
@@ -86,17 +88,4 @@ func extractGenerateParameters(ctx *cli.Context) (string, string, error) {
 	name := strings.ToLower(ctx.Args()[1])
 
 	return generatorType, name, nil
-}
-
-func printInstructions(filename string, view interface{}, funcMap template.FuncMap) {
-	t := template.New(path.Base(filename)).Funcs(funcMap)
-	t, err := t.ParseFiles(filename)
-	if err != nil {
-		errorAndBail(err)
-	}
-
-	err = t.Execute(os.Stdout, view)
-	if err != nil {
-		errorAndBail(err)
-	}
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/codegangsta/cli"
@@ -21,28 +22,23 @@ func NewNewCommand() cli.Command {
 		ShortName:   "n",
 		Usage:       "Creates a new application using the configured template",
 		Description: "new [name]",
-		Action: func(ctx *cli.Context) {
+		Action: func(ctx *cli.Context) error {
 			name, err := extractNewParameters(ctx)
 			if err != nil {
-				errorAndBail(err)
+				return cli.NewExitError(err.Error(), 1)
 			}
 
 			repoPath, err := getTemplatePath(ctx.GlobalString("template"))
 			if err != nil {
-				errorAndBail(err)
+				return cli.NewExitError(err.Error(), 1)
 			}
 
 			importPrefix := ctx.GlobalString("import-prefix")
-			var sourceRoot string
-			if ctx.GlobalString("source-path") != "" {
-			  sourceRoot = ctx.GlobalString("source-path")
-			} else {
-				sourceRoot = fmt.Sprintf("%s/src/%s", ctx.GlobalString("source-path"), importPrefix)
-			}
+			sourceRoot := fmt.Sprintf("%s/src/%s", ctx.GlobalString("source-path"), importPrefix)
 
 			appPath, err := makeAppDir(name, sourceRoot)
 			if err != nil {
-				errorAndBail(err)
+				return cli.NewExitError(err.Error(), 1)
 			}
 
 			view := &viewTemplate{
@@ -52,10 +48,20 @@ func NewNewCommand() cli.Command {
 
 			fmt.Println("Creating files...")
 			structureRoot := repoPath + "/structure"
-			err = filepath.Walk(structureRoot, directoryWalker(structureRoot, appPath, view, nil, map[string]string{}))
+			err = filepath.Walk(structureRoot, directoryWalker(structureRoot, appPath, view, funcMap, map[string]string{}))
 			if err != nil {
-				errorAndBail(err)
+				return cli.NewExitError(err.Error(), 1)
 			}
+
+			instructionsFile := path.Join(structureRoot, "instructions.tmpl")
+			if _, err := os.Stat(instructionsFile); err == nil {
+				err = printInstructions(instructionsFile, view, funcMap)
+				if err != nil {
+					return cli.NewExitError(err.Error(), 1)
+				}
+			}
+
+			return nil
 		},
 	}
 }
@@ -74,8 +80,8 @@ func makeAppDir(name string, root string) (string, error) {
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Printf("Creating directory...\n")
-		os.Mkdir(path, 0755)
-		return path, nil
+		err := os.MkdirAll(path, 0755)
+		return path, err
 	} else {
 		return "", errors.New("directory already exists, aborting")
 	}
